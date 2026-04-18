@@ -2,6 +2,26 @@
 
 import { useState, useEffect } from 'react'
 
+interface Order {
+  id: number
+  order_number: number
+  checkout_id: string
+  amount: number
+  delivery_fee?: number
+  total: number
+  currency: string
+  status: string
+  customer_name?: string
+  customer_email?: string
+  phone?: string
+  address?: string
+  city?: string
+  postal_code?: string
+  items?: string
+  created_at: string
+  paid_at?: string
+}
+
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://catalystsa.onrender.com'
 
 export default function AdminDashboard() {
@@ -12,8 +32,8 @@ export default function AdminDashboard() {
   const [loginLoading, setLoginLoading] = useState(false)
 
   // Dashboard state
-  const [orders, setOrders] = useState([])
-  const [selectedOrder, setSelectedOrder] = useState(null)
+  const [orders, setOrders] = useState<Order[]>([])
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null)
   const [ordersLoading, setOrdersLoading] = useState(false)
   const [statusUpdating, setStatusUpdating] = useState(false)
   const [statusMessage, setStatusMessage] = useState('')
@@ -34,7 +54,7 @@ export default function AdminDashboard() {
     setLoading(false)
   }, [])
 
-  async function handleLogin(e) {
+  async function handleLogin(e: React.FormEvent) {
     e.preventDefault()
     setLoginLoading(true)
     setLoginError('')
@@ -50,19 +70,18 @@ export default function AdminDashboard() {
 
       const data = await res.json()
       localStorage.setItem('admin_token', data.token)
-      localStorage.setItem('admin_token_expiry', new Date().getTime() + data.expires_in * 1000)
+      localStorage.setItem('admin_token_expiry', String(new Date().getTime() + data.expires_in * 1000))
 
       setIsAuthenticated(true)
       setLoginPassword('')
       fetchOrders(data.token)
-    } catch (error) {
-      setLoginError(error.message)
+    } catch (error) { setLoginError(error instanceof Error ? error.message : "Login failed")
     } finally {
       setLoginLoading(false)
     }
   }
 
-  async function fetchOrders(token, search = '', status = '') {
+  async function fetchOrders(token: string, search = '', status = '') {
     setOrdersLoading(true)
     try {
       let url = `${API_URL}/admin/orders?limit=100`
@@ -77,7 +96,7 @@ export default function AdminDashboard() {
 
       const data = await res.json()
       setOrders(data.orders)
-      if (selectedOrder && !data.orders.find(o => o.order_number === selectedOrder.order_number)) {
+      if (selectedOrder && !data.orders.find((o: Order) => o.order_number === selectedOrder.order_number)) {
         setSelectedOrder(null)
       }
     } catch (error) {
@@ -87,7 +106,7 @@ export default function AdminDashboard() {
     }
   }
 
-  async function fetchOrderDetail(orderNumber) {
+  async function fetchOrderDetail(orderNumber: number) {
     const token = localStorage.getItem('admin_token')
     try {
       const res = await fetch(`${API_URL}/admin/orders/${orderNumber}`, {
@@ -103,7 +122,7 @@ export default function AdminDashboard() {
     }
   }
 
-  async function updateOrderStatus(newStatus) {
+  async function updateOrderStatus(newStatus: string) {
     if (!selectedOrder) return
 
     setStatusUpdating(true)
@@ -127,28 +146,28 @@ export default function AdminDashboard() {
       
       // Refresh orders list
       const currentToken = localStorage.getItem('admin_token')
-      fetchOrders(currentToken, searchQuery, statusFilter)
+      if (currentToken) fetchOrders(currentToken, searchQuery, statusFilter)
 
       setTimeout(() => setStatusMessage(''), 3000)
     } catch (error) {
-      setStatusMessage(`❌ Error: ${error.message}`)
+      setStatusMessage(`❌ Error: ${error instanceof Error ? error.message : 'Update failed'}`)
     } finally {
       setStatusUpdating(false)
     }
   }
 
-  function handleSearch() {
+  function handleSearch(): void {
     const token = localStorage.getItem('admin_token')
-    fetchOrders(token, searchQuery, statusFilter)
+    if (token) fetchOrders(token, searchQuery, statusFilter)
   }
 
-  function handleFilterChange(newStatus) {
+  function handleFilterChange(newStatus: string) {
     setStatusFilter(newStatus)
     const token = localStorage.getItem('admin_token')
-    fetchOrders(token, searchQuery, newStatus)
+    if (token) fetchOrders(token, searchQuery, newStatus)
   }
 
-  function handleLogout() {
+  function handleLogout(): void {
     localStorage.removeItem('admin_token')
     localStorage.removeItem('admin_token_expiry')
     setIsAuthenticated(false)
@@ -341,7 +360,7 @@ export default function AdminDashboard() {
                     </div>
                     <div>
                       <p className="text-gray-600">Email</p>
-                      <p className="font-medium text-gray-800 break-all">{selectedOrder.email}</p>
+                      <p className="font-medium text-gray-800 break-all">{selectedOrder.customer_email}</p>
                     </div>
                     <div>
                       <p className="text-gray-600">Phone</p>
@@ -365,11 +384,11 @@ export default function AdminDashboard() {
                   <div className="space-y-2 text-sm">
                     <div className="flex justify-between">
                       <span className="text-gray-600">Subtotal</span>
-                      <span className="font-medium">R{selectedOrder.subtotal.toFixed(2)}</span>
+                      <span className="font-medium">R{((selectedOrder.amount || 0) / 100).toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-600">Delivery</span>
-                      <span className="font-medium">R{selectedOrder.delivery_fee.toFixed(2)}</span>
+                      <span className="font-medium">R{((selectedOrder.delivery_fee || 0) / 100).toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between pt-2 border-t border-gray-200">
                       <span className="font-semibold text-gray-800">Total</span>
@@ -422,3 +441,9 @@ export default function AdminDashboard() {
     </main>
   )
 }
+
+
+
+
+
+
