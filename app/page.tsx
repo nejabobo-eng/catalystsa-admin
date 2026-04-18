@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import ProductsManagement from './components/ProductsManagement'
 
 interface Order {
   id: number
@@ -41,6 +42,7 @@ export default function AdminDashboard() {
   // Filters
   const [searchQuery, setSearchQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
+  const [activeTab, setActiveTab] = useState<'orders' | 'products'>('orders')
 
   // Check token on mount
   useEffect(() => {
@@ -441,6 +443,9 @@ export default function AdminDashboard() {
     </main>
   )
 }
+
+
+
 
 
 
