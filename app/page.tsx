@@ -426,7 +426,7 @@ export default function AdminDashboard() {
                     </div>
                     <div className="flex justify-between pt-2 border-t border-gray-200">
                       <span className="font-semibold text-gray-800">Total</span>
-                      <span className="font-bold text-blue-600">R{selectedOrder.total.toFixed(2)}</span>
+                      <span className="font-bold text-blue-600">R{((selectedOrder.total || 0) / 100).toFixed(2)}</span>
                     </div>
                   </div>
                 </div>
