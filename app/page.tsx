@@ -7,7 +7,7 @@ interface Order {
   id: number
   order_number: number
   checkout_id: string
-  amount: number
+  subtotal: number
   delivery_fee?: number
   total: number
   currency: string
