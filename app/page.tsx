@@ -141,7 +141,7 @@ export default function AdminDashboard() {
         body: JSON.stringify({ status: newStatus }),
       })
 
-      if (!res.ok) throw new Error('Failed to update status')
+      if (!res.ok) { const errorData = await res.json(); throw new Error(errorData.detail || 'Failed to update status') }
 
       setStatusMessage(`✅ Status updated to ${newStatus}`)
       setSelectedOrder({ ...selectedOrder, status: newStatus })
@@ -152,7 +152,7 @@ export default function AdminDashboard() {
 
       setTimeout(() => setStatusMessage(''), 3000)
     } catch (error) {
-      setStatusMessage(`❌ Error: ${error instanceof Error ? error.message : 'Update failed'}`)
+      setStatusMessage(`❌ ${error instanceof Error ? error.message : 'Update failed'}`)
     } finally {
       setStatusUpdating(false)
     }
