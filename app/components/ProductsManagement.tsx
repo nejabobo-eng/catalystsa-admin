@@ -34,7 +34,12 @@ export default function ProductsManagement() {
     cost_price: '', // What you pay for it
     image_url: '',
     stock: '0',
-    active: true`n  })`n`n  // Image upload state`n  const [selectedFile, setSelectedFile] = useState<File | null>(null)`n  const [uploadingImage, setUploadingImage] = useState(false)
+    active: true
+  })
+
+  // Image upload state
+  const [selectedFile, setSelectedFile] = useState<File | null>(null)
+  const [uploadingImage, setUploadingImage] = useState(false)
 
   useEffect(() => {
     fetchProducts()
@@ -77,7 +82,12 @@ export default function ProductsManagement() {
       cost_price: '',
       image_url: '',
       stock: '0',
-      active: true`n  })`n`n  // Image upload state`n  const [selectedFile, setSelectedFile] = useState<File | null>(null)`n  const [uploadingImage, setUploadingImage] = useState(false)
+      active: true
+  })
+
+  // Image upload state
+  const [selectedFile, setSelectedFile] = useState<File | null>(null)
+  const [uploadingImage, setUploadingImage] = useState(false)
     setShowForm(true)
   }
 
@@ -387,6 +397,7 @@ export default function ProductsManagement() {
     </div>
   )
 }
+
 
 
 
