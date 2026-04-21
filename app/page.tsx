@@ -19,10 +19,25 @@ interface Order {
   city?: string
   postal_code?: string
   items?: string
+  tracking_number?: string
   created_at: string
   paid_at?: string
 }
 
+// Status flow rules - only show valid next steps
+const STATUS_FLOW: Record<string, string[]> = {
+  paid: ['processing'],
+  processing: ['shipped'],
+  shipped: ['delivered'],
+  delivered: []
+}
+
+const STATUS_LABELS: Record<string, string> = {
+  paid: 'Paid',
+  processing: 'Processing',
+  shipped: 'Shipped',
+  delivered: 'Delivered'
+}
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://catalystsa.onrender.com'
 
 export default function AdminDashboard() {
@@ -37,6 +52,7 @@ export default function AdminDashboard() {
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null)
   const [ordersLoading, setOrdersLoading] = useState(false)
   const [statusUpdating, setStatusUpdating] = useState(false)
+  const [trackingNumber, setTrackingNumber] = useState('')
   const [statusMessage, setStatusMessage] = useState('')
 
   // Filters
@@ -124,7 +140,7 @@ export default function AdminDashboard() {
     }
   }
 
-  async function updateOrderStatus(newStatus: string) {
+  async function updateOrderStatus(newStatus: string, tracking = '') {
     if (!selectedOrder) return
 
     setStatusUpdating(true)
@@ -138,7 +154,7 @@ export default function AdminDashboard() {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
         },
-        body: JSON.stringify({ status: newStatus }),
+        body: JSON.stringify({ status: newStatus, tracking_number: tracking }),
       })
 
       if (!res.ok) { const errorData = await res.json(); throw new Error(errorData.detail || 'Failed to update status') }
@@ -431,24 +447,94 @@ export default function AdminDashboard() {
                   </div>
                 </div>
 
-                {/* Status Update */}
+                                {/* Status Update - Guided Flow */}
                 <div className="mb-6">
-                  <h4 className="text-sm font-semibold text-gray-700 mb-3 uppercase">Status</h4>
-                  <select
-                    value={selectedOrder.status}
-                    onChange={(e) => updateOrderStatus(e.target.value)}
-                    disabled={statusUpdating}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
-                  >
-                    <option value="pending">Pending</option>
-                    <option value="paid">Paid</option>
-                    <option value="processing">Processing</option>
-                    <option value="shipped">Shipped</option>
-                    <option value="delivered">Delivered</option>
-                  </select>
+                  <h4 className="text-sm font-semibold text-gray-700 mb-3 uppercase">Order Status</h4>
+                  
+                  {/* Visual Progress */}
+                  <div className="mb-4 flex items-center gap-2 text-xs">
+                    <span className={`px-2 py-1 rounded ${selectedOrder.status === 'paid' ? 'bg-blue-100 text-blue-700 font-semibold' : 'bg-gray-100 text-gray-500'}`}>
+                      Paid
+                    </span>
+                    <span className="text-gray-400">→</span>
+                    <span className={`px-2 py-1 rounded ${selectedOrder.status === 'processing' ? 'bg-blue-100 text-blue-700 font-semibold' : 'bg-gray-100 text-gray-500'}`}>
+                      Processing
+                    </span>
+                    <span className="text-gray-400">→</span>
+                    <span className={`px-2 py-1 rounded ${selectedOrder.status === 'shipped' ? 'bg-blue-100 text-blue-700 font-semibold' : 'bg-gray-100 text-gray-500'}`}>
+                      Shipped
+                    </span>
+                    <span className="text-gray-400">→</span>
+                    <span className={`px-2 py-1 rounded ${selectedOrder.status === 'delivered' ? 'bg-green-100 text-green-700 font-semibold' : 'bg-gray-100 text-gray-500'}`}>
+                      Delivered
+                    </span>
+                  </div>
+
+                  {/* Status Dropdown - Only Valid Transitions */}
+                  {STATUS_FLOW[selectedOrder.status]?.length > 0 ? (
+                    <>
+                      <select
+                        value={selectedOrder.status}
+                        onChange={(e) => {
+                          if (e.target.value === 'shipped') {
+                            // Don't update yet, wait for tracking number
+                            return
+                          }
+                          updateOrderStatus(e.target.value)
+                        }}
+                        disabled={statusUpdating}
+                        className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
+                      >
+                        <option value={selectedOrder.status}>
+                          {STATUS_LABELS[selectedOrder.status]} (current)
+                        </option>
+                        {STATUS_FLOW[selectedOrder.status].filter(s => s !== 'shipped').map(status => (
+                          <option key={status} value={status}>
+                            Change to: {STATUS_LABELS[status]}
+                          </option>
+                        ))}
+                      </select>
+
+                      {/* Shipped Button with Tracking */}
+                      {STATUS_FLOW[selectedOrder.status].includes('shipped') && (
+                        <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Mark as Shipped
+                          </label>
+                          <input
+                            type="text"
+                            value={trackingNumber}
+                            onChange={(e) => setTrackingNumber(e.target.value)}
+                            placeholder="Tracking number (optional)"
+                            className="w-full border border-gray-300 rounded px-3 py-2 text-sm mb-2"
+                          />
+                          <button
+                            onClick={() => {
+                              updateOrderStatus('shipped', trackingNumber)
+                              setTrackingNumber('')
+                            }}
+                            disabled={statusUpdating}
+                            className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white px-4 py-2 rounded-lg text-sm font-medium"
+                          >
+                            {statusUpdating ? 'Updating...' : '📦 Mark as Shipped'}
+                          </button>
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <div className="px-3 py-2 bg-green-50 border border-green-200 rounded text-sm text-green-700">
+                      ✅ Order delivered - No further actions needed
+                    </div>
+                  )}
+
+                  {selectedOrder.tracking_number && (
+                    <div className="mt-3 text-xs text-gray-600">
+                      Tracking: <span className="font-mono font-semibold">{selectedOrder.tracking_number}</span>
+                    </div>
+                  )}
 
                   {statusMessage && (
-                    <div className={`mt-2 px-3 py-2 rounded text-sm ${
+                    <div className={`mt-3 px-3 py-2 rounded text-sm ${
                       statusMessage.includes('✅')
                         ? 'bg-green-50 text-green-700 border border-green-200'
                         : 'bg-red-50 text-red-700 border border-red-200'
