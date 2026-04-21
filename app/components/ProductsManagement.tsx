@@ -34,8 +34,7 @@ export default function ProductsManagement() {
     cost_price: '', // What you pay for it
     image_url: '',
     stock: '0',
-    active: true
-  })
+    active: true\n  })\n\n  // Image upload state\n  const [selectedFile, setSelectedFile] = useState<File | null>(null)\n  const [uploadingImage, setUploadingImage] = useState(false)
 
   useEffect(() => {
     fetchProducts()
@@ -78,8 +77,7 @@ export default function ProductsManagement() {
       cost_price: '',
       image_url: '',
       stock: '0',
-      active: true
-    })
+      active: true\n  })\n\n  // Image upload state\n  const [selectedFile, setSelectedFile] = useState<File | null>(null)\n  const [uploadingImage, setUploadingImage] = useState(false)
     setShowForm(true)
   }
 
@@ -223,6 +221,58 @@ export default function ProductsManagement() {
                 className="w-full border rounded px-3 py-2"
                 placeholder="https://example.com/image.jpg"
               />
+              {/* Image upload: send file to backend which uploads to Cloudinary */}
+              <div className="mt-2 flex items-center gap-2">
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => setSelectedFile(e.target.files ? e.target.files[0] : null)}
+                  className="text-sm"
+                />
+                <button
+                  type="button"
+                  onClick={async () => {
+                    if (!selectedFile) return setMessage('❌ Select a file first')
+                    setUploadingImage(true)
+                    setMessage('')
+                    try {
+                      const token = localStorage.getItem('admin_token')
+                      const fd = new FormData()
+                      fd.append('file', selectedFile)
+
+                      const res = await fetch(`${API_URL}/admin/upload-image`, {
+                        method: 'POST',
+                        headers: {
+                          Authorization: `Bearer ${token}`,
+                        },
+                        body: fd,
+                      })
+
+                      if (!res.ok) {
+                        const err = await res.json().catch(() => null)
+                        throw new Error(err?.detail || 'Upload failed')
+                      }
+
+                      const data = await res.json()
+                      if (data.url) {
+                        setFormData({ ...formData, image_url: data.url })
+                        setMessage('✅ Image uploaded')
+                        setSelectedFile(null)
+                      } else {
+                        throw new Error('Invalid upload response')
+                      }
+                    } catch (error) {
+                      setMessage(`❌ ${error instanceof Error ? error.message : 'Upload failed'}`)
+                    } finally {
+                      setUploadingImage(false)
+                    }
+                  }}
+                  disabled={uploadingImage}
+                  className="bg-gray-800 text-white px-3 py-1 rounded text-sm hover:bg-gray-700 disabled:opacity-60"
+                >
+                  {uploadingImage ? 'Uploading...' : 'Upload Image'}
+                </button>
+              </div>
             </div>
           </div>
 
@@ -337,3 +387,5 @@ export default function ProductsManagement() {
     </div>
   )
 }
+
+
