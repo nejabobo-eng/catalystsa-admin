@@ -75,7 +75,56 @@ export default function ProductsManagement() {
   }
 
   function handleAddNew() {
+    setEditingProduct(null)
+    setFormData({
+      name: '',
+      description: '',
+      cost_price: '',
+      image_url: '',
+      stock: '0',
+      active: true
+    })
     setShowForm(true)
+  }
+
+  // Upload helper: uploads file to backend which forwards to Cloudinary
+  async function handleImageUpload(file: File): Promise<string | null> {
+    setUploadingImage(true)
+    setMessage('')
+    try {
+      const token = localStorage.getItem('admin_token')
+      const fd = new FormData()
+      fd.append('file', file)
+
+      const res = await fetch(`${API_URL}/admin/upload-image`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        body: fd,
+      })
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => null)
+        throw new Error(err?.detail || 'Upload failed')
+      }
+
+      const data = await res.json()
+      const url = data?.url || data?.secure_url || data?.data?.url || null
+      if (url) {
+        setFormData((prev) => ({ ...prev, image_url: url }))
+        setMessage('✅ Image uploaded')
+        setSelectedFile(null)
+        return url
+      }
+
+      throw new Error('Invalid upload response')
+    } catch (error) {
+      setMessage(`❌ ${error instanceof Error ? error.message : 'Upload failed'}`)
+      return null
+    } finally {
+      setUploadingImage(false)
+    }
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -84,6 +133,12 @@ export default function ProductsManagement() {
     setMessage('')
 
     try {
+      // Ensure image is uploaded before saving (avoid React state timing issues)
+      let uploadedUrl: string | null = formData.image_url || null
+      if (selectedFile && !formData.image_url) {
+        uploadedUrl = await handleImageUpload(selectedFile)
+      }
+
       const token = localStorage.getItem('admin_token')
       const costPriceInCents = Math.round(parseFloat(formData.cost_price) * 100)
 
@@ -91,7 +146,7 @@ export default function ProductsManagement() {
         name: formData.name,
         description: formData.description || null,
         cost_price: costPriceInCents, // Backend will calculate selling price
-        image_url: formData.image_url || null,
+        image_url: uploadedUrl || null,
         stock: parseInt(formData.stock),
         active: formData.active
       }
@@ -230,39 +285,7 @@ export default function ProductsManagement() {
                   type="button"
                   onClick={async () => {
                     if (!selectedFile) return setMessage('❌ Select a file first')
-                    setUploadingImage(true)
-                    setMessage('')
-                    try {
-                      const token = localStorage.getItem('admin_token')
-                      const fd = new FormData()
-                      fd.append('file', selectedFile)
-
-                      const res = await fetch(`${API_URL}/admin/upload-image`, {
-                        method: 'POST',
-                        headers: {
-                          Authorization: `Bearer ${token}`,
-                        },
-                        body: fd,
-                      })
-
-                      if (!res.ok) {
-                        const err = await res.json().catch(() => null)
-                        throw new Error(err?.detail || 'Upload failed')
-                      }
-
-                      const data = await res.json()
-                      if (data.url) {
-                        setFormData({ ...formData, image_url: data.url })
-                        setMessage('✅ Image uploaded')
-                        setSelectedFile(null)
-                      } else {
-                        throw new Error('Invalid upload response')
-                      }
-                    } catch (error) {
-                      setMessage(`❌ ${error instanceof Error ? error.message : 'Upload failed'}`)
-                    } finally {
-                      setUploadingImage(false)
-                    }
+                    await handleImageUpload(selectedFile)
                   }}
                   disabled={uploadingImage}
                   className="bg-gray-800 text-white px-3 py-1 rounded text-sm hover:bg-gray-700 disabled:opacity-60"
