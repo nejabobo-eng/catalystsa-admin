@@ -75,19 +75,6 @@ export default function ProductsManagement() {
   }
 
   function handleAddNew() {
-    setEditingProduct(null)
-    setFormData({
-      name: '',
-      description: '',
-      cost_price: '',
-      image_url: '',
-      stock: '0',
-      active: true
-  })
-
-  // Image upload state
-  const [selectedFile, setSelectedFile] = useState<File | null>(null)
-  const [uploadingImage, setUploadingImage] = useState(false)
     setShowForm(true)
   }
 
