@@ -90,7 +90,7 @@ export default function ProductsManagement() {
   // Upload helper: uploads file to backend which forwards to Cloudinary
   async function handleImageUpload(file: File): Promise<string | null> {
     setUploadingImage(true)
-    setMessage('')
+    // keep user-facing messages minimal; clear-only handled by submit flow
     try {
       const token = localStorage.getItem('admin_token')
       const fd = new FormData()
@@ -113,7 +113,6 @@ export default function ProductsManagement() {
       const url = data?.url || data?.secure_url || data?.data?.url || null
       if (url) {
         setFormData((prev) => ({ ...prev, image_url: url }))
-        setMessage('✅ Image uploaded')
         setSelectedFile(null)
         return url
       }
